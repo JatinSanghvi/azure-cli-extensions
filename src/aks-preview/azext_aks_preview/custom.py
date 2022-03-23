@@ -85,6 +85,8 @@ from ._consts import (
     CONST_INGRESS_APPGW_SUBNET_CIDR,
     CONST_INGRESS_APPGW_SUBNET_ID,
     CONST_INGRESS_APPGW_WATCH_NAMESPACE,
+    CONST_KEDA_ADDON_NAME,
+    CONST_KEDA_LOG_LEVEL,
     CONST_KUBE_DASHBOARD_ADDON_NAME,
     CONST_MANAGED_IDENTITY_OPERATOR_ROLE,
     CONST_MANAGED_IDENTITY_OPERATOR_ROLE_ID,
@@ -764,6 +766,7 @@ def aks_create(cmd,
                message_of_the_day=None,
                enable_azure_keyvault_kms=False,
                azure_keyvault_kms_key_id=None,
+               keda_log_level=None,
                yes=False):
     # DO NOT MOVE: get all the original parameters and save them as a dictionary
     raw_parameters = locals()
@@ -844,7 +847,8 @@ def aks_update(cmd,     # pylint: disable=too-many-statements,too-many-branches,
                enable_oidc_issuer=False,
                http_proxy_config=None,
                enable_azure_keyvault_kms=False,
-               azure_keyvault_kms_key_id=None):
+               azure_keyvault_kms_key_id=None,
+               keda_log_level=None):
     # DO NOT MOVE: get all the original parameters and save them as a dictionary
     raw_parameters = locals()
 
@@ -1304,7 +1308,8 @@ def _handle_addons_args(cmd,  # pylint: disable=too-many-statements
                         aci_subnet_name=None,
                         vnet_subnet_id=None,
                         enable_secret_rotation=False,
-                        rotation_poll_interval=None,):
+                        rotation_poll_interval=None,
+                        keda_log_level=None):
     if not addon_profiles:
         addon_profiles = {}
     addons = addons_str.split(',') if addons_str else []
@@ -1383,6 +1388,12 @@ def _handle_addons_args(cmd,  # pylint: disable=too-many-statements
             config={CONST_VIRTUAL_NODE_SUBNET_NAME: aci_subnet_name}
         )
         addons.remove('virtual-node')
+    if 'keda' in addons:
+        addon_profile = ManagedClusterAddonProfile(enabled=True, config={CONST_KEDA_LOG_LEVEL: "error"})
+        if keda_log_level is not None:
+            addon_profile.config[CONST_KEDA_LOG_LEVEL] = keda_log_level
+        addon_profiles[CONST_KEDA_ADDON_NAME] = addon_profile
+        addons.remove('keda')
 
     # error out if any (unrecognized) addons remain
     if addons:
@@ -1980,17 +1991,18 @@ def aks_addon_show(cmd, client, resource_group_name, name, addon):  # pylint: di
     }
 
 
-def aks_addon_enable(cmd, client, resource_group_name, name, addon, workspace_resource_id=None,
-                     subnet_name=None, appgw_name=None, appgw_subnet_prefix=None, appgw_subnet_cidr=None, appgw_id=None,
-                     appgw_subnet_id=None,
-                     appgw_watch_namespace=None, enable_sgxquotehelper=False, enable_secret_rotation=False, rotation_poll_interval=None,
+def aks_addon_enable(cmd, client, resource_group_name, name, addon, workspace_resource_id=None, subnet_name=None,
+                     appgw_name=None, appgw_subnet_prefix=None, appgw_subnet_cidr=None, appgw_id=None,
+                     appgw_subnet_id=None, appgw_watch_namespace=None, enable_sgxquotehelper=False,
+                     enable_secret_rotation=False, rotation_poll_interval=None, keda_log_level=None,
                      no_wait=False, enable_msi_auth_for_monitoring=False):
     return enable_addons(cmd, client, resource_group_name, name, addon, workspace_resource_id=workspace_resource_id,
                          subnet_name=subnet_name, appgw_name=appgw_name, appgw_subnet_prefix=appgw_subnet_prefix,
                          appgw_subnet_cidr=appgw_subnet_cidr, appgw_id=appgw_id, appgw_subnet_id=appgw_subnet_id,
                          appgw_watch_namespace=appgw_watch_namespace, enable_sgxquotehelper=enable_sgxquotehelper,
-                         enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval, no_wait=no_wait,
-                         enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring)
+                         enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval,
+                         keda_log_level=keda_log_level,
+                         no_wait=no_wait, enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring)
 
 
 def aks_addon_disable(cmd, client, resource_group_name, name, addon, no_wait=False):
@@ -1999,8 +2011,8 @@ def aks_addon_disable(cmd, client, resource_group_name, name, addon, no_wait=Fal
 
 def aks_addon_update(cmd, client, resource_group_name, name, addon, workspace_resource_id=None,
                      subnet_name=None, appgw_name=None, appgw_subnet_prefix=None, appgw_subnet_cidr=None, appgw_id=None,
-                     appgw_subnet_id=None,
-                     appgw_watch_namespace=None, enable_sgxquotehelper=False, enable_secret_rotation=False, rotation_poll_interval=None,
+                     appgw_subnet_id=None, appgw_watch_namespace=None, enable_sgxquotehelper=False,
+                     enable_secret_rotation=False, rotation_poll_interval=None, keda_log_level=None,
                      no_wait=False, enable_msi_auth_for_monitoring=False):
     addon_profiles = client.get(resource_group_name, name).addon_profiles
     addon_key = ADDONS[addon]
@@ -2013,8 +2025,9 @@ def aks_addon_update(cmd, client, resource_group_name, name, addon, workspace_re
                          subnet_name=subnet_name, appgw_name=appgw_name, appgw_subnet_prefix=appgw_subnet_prefix,
                          appgw_subnet_cidr=appgw_subnet_cidr, appgw_id=appgw_id, appgw_subnet_id=appgw_subnet_id,
                          appgw_watch_namespace=appgw_watch_namespace, enable_sgxquotehelper=enable_sgxquotehelper,
-                         enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval, no_wait=no_wait,
-                         enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring)
+                         enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval,
+                         keda_log_level=keda_log_level,
+                         no_wait=no_wait, enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring)
 
 
 def aks_disable_addons(cmd, client, resource_group_name, name, addons, no_wait=False):
@@ -2058,17 +2071,24 @@ def aks_disable_addons(cmd, client, resource_group_name, name, addons, no_wait=F
 
 
 def aks_enable_addons(cmd, client, resource_group_name, name, addons, workspace_resource_id=None,
-                      subnet_name=None, appgw_name=None, appgw_subnet_prefix=None, appgw_subnet_cidr=None, appgw_id=None, appgw_subnet_id=None,
-                      appgw_watch_namespace=None, enable_sgxquotehelper=False, enable_secret_rotation=False, rotation_poll_interval=None, no_wait=False, enable_msi_auth_for_monitoring=False):
+                      subnet_name=None, appgw_name=None, appgw_subnet_prefix=None, appgw_subnet_cidr=None,
+                      appgw_id=None, appgw_subnet_id=None, appgw_watch_namespace=None, enable_sgxquotehelper=False,
+                      enable_secret_rotation=False, rotation_poll_interval=None, keda_log_level=None,
+                      no_wait=False, enable_msi_auth_for_monitoring=False):
 
     instance = client.get(resource_group_name, name)
     msi_auth = True if instance.service_principal_profile.client_id == "msi" else False  # this is overwritten by _update_addons(), so the value needs to be recorded here
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
     instance = _update_addons(cmd, instance, subscription_id, resource_group_name, name, addons, enable=True,
-                              workspace_resource_id=workspace_resource_id, enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring, subnet_name=subnet_name,
-                              appgw_name=appgw_name, appgw_subnet_prefix=appgw_subnet_prefix, appgw_subnet_cidr=appgw_subnet_cidr, appgw_id=appgw_id, appgw_subnet_id=appgw_subnet_id, appgw_watch_namespace=appgw_watch_namespace,
-                              enable_sgxquotehelper=enable_sgxquotehelper, enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval, no_wait=no_wait)
+                              workspace_resource_id=workspace_resource_id,
+                              enable_msi_auth_for_monitoring=enable_msi_auth_for_monitoring, subnet_name=subnet_name,
+                              appgw_name=appgw_name, appgw_subnet_prefix=appgw_subnet_prefix,
+                              appgw_subnet_cidr=appgw_subnet_cidr, appgw_id=appgw_id, appgw_subnet_id=appgw_subnet_id,
+                              appgw_watch_namespace=appgw_watch_namespace, enable_sgxquotehelper=enable_sgxquotehelper,
+                              enable_secret_rotation=enable_secret_rotation,
+                              rotation_poll_interval=rotation_poll_interval, keda_log_level=keda_log_level,
+                              no_wait=no_wait)
 
     if CONST_MONITORING_ADDON_NAME in instance.addon_profiles and instance.addon_profiles[CONST_MONITORING_ADDON_NAME].enabled:
         if CONST_MONITORING_USING_AAD_MSI_AUTH in instance.addon_profiles[CONST_MONITORING_ADDON_NAME].config and \
@@ -2150,6 +2170,7 @@ def _update_addons(cmd,  # pylint: disable=too-many-branches,too-many-statements
                    enable_secret_rotation=False,
                    disable_secret_rotation=False,
                    rotation_poll_interval=None,
+                   keda_log_level=None,
                    no_wait=False):  # pylint: disable=unused-argument
 
     # parse the comma-separated addons argument
@@ -2257,6 +2278,16 @@ def _update_addons(cmd,  # pylint: disable=too-many-branches,too-many-statements
                 if rotation_poll_interval is not None:
                     addon_profile.config[CONST_ROTATION_POLL_INTERVAL] = rotation_poll_interval
                 addon_profiles[CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME] = addon_profile
+            elif addon == CONST_KEDA_ADDON_NAME:
+                if addon_profile.enabled:
+                    raise CLIError('The keda addon is already enabled for this managed cluster.\n'
+                                   'To change keda configuration, run '
+                                   f'"az aks disable-addons -a keda -n {name} -g {resource_group_name}" '
+                                   'before enabling it again.')
+                addon_profile = ManagedClusterAddonProfile(enabled=True, config={CONST_KEDA_LOG_LEVEL: "error"})
+                if keda_log_level is not None:
+                    addon_profile.config[CONST_KEDA_LOG_LEVEL] = keda_log_level
+                addon_profiles[CONST_KEDA_ADDON_NAME] = addon_profile
             addon_profiles[addon] = addon_profile
         else:
             if addon not in addon_profiles:

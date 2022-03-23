@@ -19,8 +19,9 @@ from ._consts import ADDONS, CONST_VIRTUAL_NODE_ADDON_NAME, CONST_MONITORING_ADD
     CONST_VIRTUAL_NODE_SUBNET_NAME, CONST_INGRESS_APPGW_ADDON_NAME, CONST_INGRESS_APPGW_APPLICATION_GATEWAY_NAME, \
     CONST_INGRESS_APPGW_SUBNET_CIDR, CONST_INGRESS_APPGW_APPLICATION_GATEWAY_ID, CONST_INGRESS_APPGW_SUBNET_ID, \
     CONST_INGRESS_APPGW_WATCH_NAMESPACE, CONST_OPEN_SERVICE_MESH_ADDON_NAME, CONST_CONFCOM_ADDON_NAME, \
-    CONST_ACC_SGX_QUOTE_HELPER_ENABLED, CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME, CONST_SECRET_ROTATION_ENABLED, CONST_ROTATION_POLL_INTERVAL, \
-    CONST_KUBE_DASHBOARD_ADDON_NAME
+    CONST_ACC_SGX_QUOTE_HELPER_ENABLED, CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME, \
+    CONST_SECRET_ROTATION_ENABLED, CONST_ROTATION_POLL_INTERVAL, CONST_KUBE_DASHBOARD_ADDON_NAME, \
+    CONST_KEDA_ADDON_NAME, CONST_KEDA_LOG_LEVEL
 
 logger = get_logger(__name__)
 
@@ -42,6 +43,7 @@ def enable_addons(cmd,
                   enable_sgxquotehelper=False,
                   enable_secret_rotation=False,
                   rotation_poll_interval=None,
+                  keda_log_level=None,
                   no_wait=False,
                   enable_msi_auth_for_monitoring=False):
     instance = client.get(resource_group_name, name)
@@ -57,7 +59,8 @@ def enable_addons(cmd,
                              appgw_subnet_cidr=appgw_subnet_cidr, appgw_id=appgw_id, appgw_subnet_id=appgw_subnet_id,
                              appgw_watch_namespace=appgw_watch_namespace,
                              enable_sgxquotehelper=enable_sgxquotehelper,
-                             enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval, no_wait=no_wait)
+                             enable_secret_rotation=enable_secret_rotation, rotation_poll_interval=rotation_poll_interval,
+                             keda_log_level=keda_log_level, no_wait=no_wait)
 
     if CONST_MONITORING_ADDON_NAME in instance.addon_profiles and instance.addon_profiles[
        CONST_MONITORING_ADDON_NAME].enabled:
@@ -142,6 +145,7 @@ def update_addons(cmd,  # pylint: disable=too-many-branches,too-many-statements
                   enable_sgxquotehelper=False,
                   enable_secret_rotation=False,
                   rotation_poll_interval=None,
+                  keda_log_level=None,
                   no_wait=False):  # pylint: disable=unused-argument
     # parse the comma-separated addons argument
     addon_args = addons.split(',')
@@ -256,6 +260,16 @@ def update_addons(cmd,  # pylint: disable=too-many-branches,too-many-statements
                 if rotation_poll_interval is not None:
                     addon_profile.config[CONST_ROTATION_POLL_INTERVAL] = rotation_poll_interval
                 addon_profiles[CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME] = addon_profile
+            elif addon == CONST_KEDA_ADDON_NAME:
+                if addon_profile.enabled and check_enabled:
+                    raise CLIError('The keda addon is already enabled for this managed cluster.\n'
+                                   'To change keda configuration, run '
+                                   f'"az aks disable-addons -a keda -n {name} -g {resource_group_name}" '
+                                   'before enabling it again.')
+                addon_profile = ManagedClusterAddonProfile(enabled=True, config={CONST_KEDA_LOG_LEVEL: "error"})
+                if keda_log_level is not None:
+                    addon_profile.config[CONST_KEDA_LOG_LEVEL] = keda_log_level
+                addon_profiles[CONST_KEDA_ADDON_NAME] = addon_profile
             addon_profiles[addon] = addon_profile
         else:
             if addon not in addon_profiles:

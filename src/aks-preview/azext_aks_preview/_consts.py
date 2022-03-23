@@ -75,6 +75,10 @@ CONST_ROTATION_POLL_INTERVAL = "rotationPollInterval"
 CONST_SCALE_DOWN_MODE_DELETE = "Delete"
 CONST_SCALE_DOWN_MODE_DEALLOCATE = "Deallocate"
 
+## KEDA addon keys
+CONST_KEDA_ADDON_NAME = "keda"
+CONST_KEDA_LOG_LEVEL = "kedaLogLevel"
+
 ADDONS = {
     'http_application_routing': CONST_HTTP_APPLICATION_ROUTING_ADDON_NAME,
     'monitoring': CONST_MONITORING_ADDON_NAME,
@@ -83,9 +87,10 @@ ADDONS = {
     'kube-dashboard': CONST_KUBE_DASHBOARD_ADDON_NAME,
     'ingress-appgw': CONST_INGRESS_APPGW_ADDON_NAME,
     'open-service-mesh': CONST_OPEN_SERVICE_MESH_ADDON_NAME,
-    "confcom": CONST_CONFCOM_ADDON_NAME,
+    'confcom': CONST_CONFCOM_ADDON_NAME,
     'gitops': CONST_GITOPS_ADDON_NAME,
-    'azure-keyvault-secrets-provider': CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME
+    'azure-keyvault-secrets-provider': CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME,
+    'keda': CONST_KEDA_ADDON_NAME
 }
 
 ADDONS_DESCRIPTIONS = {
@@ -98,7 +103,8 @@ ADDONS_DESCRIPTIONS = {
     CONST_OPEN_SERVICE_MESH_ADDON_NAME: '- enable Open Service Mesh addon (PREVIEW).',
     CONST_CONFCOM_ADDON_NAME: '- enable confcom addon, this will enable SGX device plugin by default (PREVIEW).',
     CONST_GITOPS_ADDON_NAME: '- enable GitOps (PREVIEW).',
-    CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME: '- enable Azure Keyvault Secrets Provider addon (PREVIEW).'
+    CONST_AZURE_KEYVAULT_SECRETS_PROVIDER_ADDON_NAME: '- enable Azure Keyvault Secrets Provider addon (PREVIEW).',
+    CONST_KEDA_ADDON_NAME: '- enable KEDA addon (PREVIEW).'
 }
 
 CONST_WORKLOAD_RUNTIME_OCI_CONTAINER = "OCIContainer"

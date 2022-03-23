@@ -446,7 +446,7 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
         list_available_cmd = 'aks addon list-available -o json'
         addon_list = self.cmd(list_available_cmd).get_output_in_json()
 
-        assert len(addon_list) == 10
+        assert len(addon_list) == 11
         assert addon_list[0]['name'] == "http_application_routing"
         assert addon_list[1]['name'] == "monitoring"
         assert addon_list[2]['name'] == "virtual-node"
@@ -457,6 +457,7 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
         assert addon_list[7]['name'] == "confcom"
         assert addon_list[8]['name'] == "gitops"
         assert addon_list[9]['name'] == "azure-keyvault-secrets-provider"
+        assert addon_list[10]['name'] == "keda"
 
     @AllowLargeResponse()
     @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
@@ -773,6 +774,48 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
 
     @AllowLargeResponse()
     @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_addon_enable_with_keda(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys(),
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --ssh-key-value={ssh_key_value} --output=json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda', None),
+        ])
+
+        addon_enable_cmd = 'aks addon enable --resource-group={resource_group} --name={name} --addon=keda --output=json'
+        self.cmd(addon_enable_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "error"),
+        ])
+
+        addon_disable_cmd = 'aks addon disable --resource-group={resource_group} --name={name} --addon=keda --output=json'
+        self.cmd(addon_disable_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', False),
+            self.check('addonProfiles.keda.config', None),
+        ])
+
+        addon_enable_with_log_level_cmd = 'aks addon enable --resource-group={resource_group} --name={name} --addon=keda --keda-log-level=debug --output=json'
+        self.cmd(addon_enable_with_log_level_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "debug"),
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait --output=json'
+        self.cmd(delete_cmd, checks=[
+            self.is_empty(),
+        ])
+
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
     def test_aks_addon_update_all_disabled(self, resource_group, resource_group_location):
         aks_name = self.create_random_name('cliakstest', 16)
         self.kwargs.update({
@@ -871,6 +914,40 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
             self.is_empty(),
         ])
 
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_addon_update_with_keda(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys(),
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --ssh-key-value={ssh_key_value} --output=json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda', None),
+        ])
+
+        addon_enable_cmd = 'aks addon enable --resource-group={resource_group} --name={name} --addon=keda --output=json'
+        self.cmd(addon_enable_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "error"),
+        ])
+
+        addon_update_with_log_level_cmd = 'aks addon update --resource-group={resource_group} --name={name} --addon=keda --keda-log-level=debug --output=json'
+        self.cmd(addon_update_with_log_level_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "debug"),
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait --output=json'
+        self.cmd(delete_cmd, checks=[
+            self.is_empty(),
+        ])
 
     @AllowLargeResponse()
     @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
@@ -947,6 +1024,7 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
             self.is_empty(),
         ])
 
+
     @AllowLargeResponse()
     @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
     def test_aks_create_addon_with_azurekeyvaultsecretsprovider_with_secret_rotation(self, resource_group, resource_group_location):
@@ -975,6 +1053,29 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
         self.cmd(cmd, checks=[
             self.is_empty(),
         ])
+
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_create_with_keda_addon(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys()
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --addon=keda --ssh-key-value={ssh_key_value} -o json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "error")
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait'
+        self.cmd(delete_cmd, checks=[
+            self.is_empty(),
+        ])
+
 
     @AllowLargeResponse()
     @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
@@ -1191,6 +1292,99 @@ class AzureKubernetesServiceScenarioTest(ScenarioTest):
         # delete
         cmd = 'aks delete --resource-group={resource_group} --name={aks_name} --yes --no-wait'
         self.cmd(cmd, checks=[
+            self.is_empty(),
+        ])
+
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_create_with_keda_addon(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys(),
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --addon=keda --ssh-key-value={ssh_key_value} --output=json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "error"),
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait --output=json'
+        self.cmd(delete_cmd, checks=[
+            self.is_empty(),
+        ])
+
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_create_with_keda_addon_with_log_level(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys(),
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --addon=keda --keda-log-level=debug --ssh-key-value={ssh_key_value} --output=json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "debug"),
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait --output=json'
+        self.cmd(delete_cmd, checks=[
+            self.is_empty(),
+        ])
+
+    @AllowLargeResponse()
+    @AKSCustomResourceGroupPreparer(random_name_length=17, name_prefix='clitest', location='westus2')
+    def test_aks_enable_addon_with_keda(self, resource_group, resource_group_location):
+        aks_name = self.create_random_name('cliakstest', 16)
+        self.kwargs.update({
+            'resource_group': resource_group,
+            'name': aks_name,
+            'ssh_key_value': self.generate_ssh_keys(),
+        })
+
+        create_cmd = 'aks create --resource-group={resource_group} --name={name} --ssh-key-value={ssh_key_value} --output=json'
+        self.cmd(create_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda', None),
+        ])
+
+        enable_addon_cmd = 'aks enable-addons --resource-group={resource_group} --name={name} --addons=keda --output=json'
+        self.cmd(enable_addon_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "error"),
+        ])
+
+        update_with_log_level_cmd = 'aks update --resource-group={resource_group} --name={name} --keda-log-level=debug --output=json'
+        self.cmd(update_with_log_level_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "debug"),
+        ])
+
+        disable_addon_cmd = 'aks disable-addons --resource-group={resource_group} --name={name} --addons=keda --output=json'
+        self.cmd(disable_addon_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', False),
+            self.check('addonProfiles.keda.config', None),
+        ])
+
+        enable_addon_with_log_level_cmd = 'aks enable-addons --resource-group={resource_group} --name={name} --addons=keda --keda-log-level=info --output=json'
+        self.cmd(enable_addon_with_log_level_cmd, checks=[
+            self.check('provisioningState', 'Succeeded'),
+            self.check('addonProfiles.keda.enabled', True),
+            self.check('addonProfiles.keda.config.logLevel', "info"),
+        ])
+
+        delete_cmd = 'aks delete --resource-group={resource_group} --name={name} --yes --no-wait --output=json'
+        self.cmd(delete_cmd, checks=[
             self.is_empty(),
         ])
 

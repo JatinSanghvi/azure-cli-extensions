@@ -24,7 +24,7 @@ from ._validators import (
     validate_load_balancer_outbound_ports, validate_load_balancer_idle_timeout, validate_nat_gateway_idle_timeout, validate_nodepool_tags, validate_addon,
     validate_nodepool_labels, validate_vnet_subnet_id, validate_pod_subnet_id, validate_max_surge, validate_assign_identity, validate_addons,
     validate_pod_identity_pod_labels, validate_pod_identity_resource_name, validate_pod_identity_resource_namespace, validate_assign_kubelet_identity,
-    validate_host_group_id, validate_message_of_the_day, validate_azure_keyvault_kms_key_id)
+    validate_host_group_id, validate_message_of_the_day, validate_azure_keyvault_kms_key_id, validate_keda_log_level)
 from ._consts import CONST_OUTBOUND_TYPE_LOAD_BALANCER, CONST_OUTBOUND_TYPE_USER_DEFINED_ROUTING, CONST_OUTBOUND_TYPE_MANAGED_NAT_GATEWAY, \
     CONST_OUTBOUND_TYPE_USER_ASSIGNED_NAT_GATEWAY, CONST_SCALE_SET_PRIORITY_REGULAR, CONST_SCALE_SET_PRIORITY_SPOT, \
     CONST_SPOT_EVICTION_POLICY_DELETE, CONST_SPOT_EVICTION_POLICY_DEALLOCATE, \
@@ -209,6 +209,7 @@ def load_arguments(self, _):
         c.argument('message_of_the_day', type=str)  # no validation for aks create because it already only supports Linux.
         c.argument('enable_azure_keyvault_kms', action='store_true', is_preview=True)
         c.argument('azure_keyvault_kms_key_id', validator=validate_azure_keyvault_kms_key_id, is_preview=True)
+        c.argument('keda_log_level', validator=validate_keda_log_level, is_preview=True)
 
     with self.argument_context('aks update') as c:
         c.argument('enable_cluster_autoscaler', options_list=[
@@ -272,6 +273,7 @@ def load_arguments(self, _):
         c.argument('http_proxy_config', type=str)
         c.argument('enable_azure_keyvault_kms', action='store_true', is_preview=True)
         c.argument('azure_keyvault_kms_key_id', validator=validate_azure_keyvault_kms_key_id, is_preview=True)
+        c.argument('keda_log_level', validator=validate_keda_log_level, is_preview=True)
 
     with self.argument_context('aks scale') as c:
         c.argument('nodepool_name', type=str,
@@ -413,6 +415,7 @@ def load_arguments(self, _):
         c.argument('workspace_resource_id')
         c.argument('enable_msi_auth_for_monitoring',
                    arg_type=get_three_state_flag(), is_preview=True)
+        c.argument('keda_log_level', validator=validate_keda_log_level, is_preview=True)
 
     with self.argument_context('aks addon disable') as c:
         c.argument('addon', options_list=[
@@ -441,6 +444,7 @@ def load_arguments(self, _):
         c.argument('workspace_resource_id')
         c.argument('enable_msi_auth_for_monitoring',
                    arg_type=get_three_state_flag(), is_preview=True)
+        c.argument('keda_log_level', validator=validate_keda_log_level, is_preview=True)
 
     with self.argument_context('aks disable-addons') as c:
         c.argument('addons', options_list=[
@@ -469,6 +473,7 @@ def load_arguments(self, _):
         c.argument('workspace_resource_id')
         c.argument('enable_msi_auth_for_monitoring',
                    arg_type=get_three_state_flag(), is_preview=True)
+        c.argument('keda_log_level', validator=validate_keda_log_level, is_preview=True)
 
     with self.argument_context('aks get-credentials') as c:
         c.argument('admin', options_list=['--admin', '-a'], default=False)

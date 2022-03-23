@@ -2549,6 +2549,7 @@ class AKSPreviewCreateDecoratorTestCase(unittest.TestCase):
                 "rotation_poll_interval": None,
                 "appgw_subnet_prefix": None,
                 "enable_msi_auth_for_monitoring": False,
+                "keda_log_level": None,
             },
             CUSTOM_MGMT_AKS_PREVIEW,
         )

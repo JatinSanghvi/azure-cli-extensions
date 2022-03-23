@@ -2178,7 +2178,8 @@ class AKSPreviewUpdateDecorator(AKSUpdateDecorator):
                 '"--nodepool-labels" or '
                 '"--enable-oidc-issuer" or '
                 '"--http-proxy-config" or '
-                '"--enable-azure-keyvault-kms".'
+                '"--enable-azure-keyvault-kms" or '
+                '"--keda-log-level".'
             )
 
     def update_load_balancer_profile(self, mc: ManagedCluster) -> ManagedCluster:
