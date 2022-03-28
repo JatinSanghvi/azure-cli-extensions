@@ -171,18 +171,31 @@ helps['aks create'] = """
           short-summary: Enable the Kubernetes addons in a comma-separated list.
           long-summary: |-
             These addons are available:
-                http_application_routing        - configure ingress with automatic public DNS name creation.
-                monitoring                      - turn on Log Analytics monitoring. Uses the Log Analytics Default Workspace if it exists, else creates one. Specify "--workspace-resource-id" to use an existing workspace.
-                                                  If monitoring addon is enabled --no-wait argument will have no effect
-                virtual-node                    - enable AKS Virtual Node. Requires --aci-subnet-name to provide the name of an existing subnet for the Virtual Node to use.
-                                                  aci-subnet-name must be in the same vnet which is specified by --vnet-subnet-id (required as well).
-                azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS enables at-scale enforcements and safeguards on your clusters in a centralized, consistent manner.
+                http_application_routing        - configure ingress with automatic public DNS name
+                                                  creation.
+                monitoring                      - turn on Log Analytics monitoring. Uses the Log
+                                                  Analytics Default Workspace if it exists, else creates
+                                                  one. Specify "--workspace-resource-id" to use an
+                                                  existing workspace.
+                                                  If monitoring addon is enabled --no-wait argument will
+                                                  have no effect.
+                virtual-node                    - enable AKS Virtual Node. Requires --aci-subnet-name to
+                                                  provide the name of an existing subnet for the Virtual
+                                                  Node to use. aci-subnet-name must be in the same vnet
+                                                  which is specified by --vnet-subnet-id (required as
+                                                  well).
+                azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS
+                                                  enables at-scale enforcements and safeguards on your
+                                                  clusters in a centralized, consistent manner.
                                                   Learn more at aka.ms/aks/policy.
-                ingress-appgw                   - enable Application Gateway Ingress Controller addon (PREVIEW).
-                confcom                         - enable confcom addon, this will enable SGX device plugin by default(PREVIEW).
+                ingress-appgw                   - enable Application Gateway Ingress Controller addon
+                                                  (PREVIEW).
+                confcom                         - enable confcom addon, this will enable SGX device
+                                                  plugin by default (PREVIEW).
                 open-service-mesh               - enable Open Service Mesh addon (PREVIEW).
                 gitops                          - enable GitOps (PREVIEW).
-                azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon (PREVIEW).
+                azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon
+                                                  (PREVIEW).
         - name: --disable-rbac
           type: bool
           short-summary: Disable Kubernetes Role-Based Access Control.
@@ -413,6 +426,12 @@ helps['aks create'] = """
         - name: --azure-keyvault-kms-key-id
           type: string
           short-summary: Identifier of Azure Key Vault key.
+        - name: --enable-keda
+          type: bool
+          short-summary: (PREVIEW) Enable KEDA integration.
+        - name: --keda-log-level
+          type: string
+          short-summary: "(PREVIEW) KEDA logging level. Allowed values: debug, info, error."
     examples:
         - name: Create a Kubernetes cluster with an existing SSH public key.
           text: az aks create -g MyResourceGroup -n MyManagedCluster --ssh-key-value /path/to/publickey
@@ -689,6 +708,12 @@ helps['aks update'] = """
         - name: --azure-keyvault-kms-key-id
           type: string
           short-summary: Identifier of Azure Key Vault key.
+        - name: --enable-keda
+          type: bool
+          short-summary: (PREVIEW) Enable KEDA integration.
+        - name: --keda-log-level
+          type: string
+          short-summary: "(PREVIEW) KEDA logging level. Allowed values: debug, info, error."
     examples:
       - name: Enable cluster-autoscaler within node count range [1,5]
         text: az aks update --enable-cluster-autoscaler --min-count 1 --max-count 5 -g MyResourceGroup -n MyManagedCluster
@@ -1252,16 +1277,27 @@ type: command
 short-summary: Enable a Kubernetes addon.
 long-summary: |-
     These addons are available:
-        http_application_routing        - configure ingress with automatic public DNS name creation.
-        monitoring                      - turn on Log Analytics monitoring. Uses the Log Analytics Default Workspace if it exists, else creates one. Specify "--workspace-resource-id" to use an existing workspace.
-                                          If monitoring addon is enabled --no-wait argument will have no effect
-        virtual-node                    - enable AKS Virtual Node. Requires --subnet-name to provide the name of an existing subnet for the Virtual Node to use.
-        azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS enables at-scale enforcements and safeguards on your clusters in a centralized, consistent manner.
+        http_application_routing        - configure ingress with automatic public DNS name
+                                          creation.
+        monitoring                      - turn on Log Analytics monitoring. Uses the Log
+                                          Analytics Default Workspace if it exists, else creates
+                                          one. Specify "--workspace-resource-id" to use an
+                                          existing workspace.
+                                          If monitoring addon is enabled --no-wait argument will
+                                          have no effect.
+        virtual-node                    - enable AKS Virtual Node. Requires --subnet-name to
+                                          provide the name of an existing subnet for the Virtual
+                                          Node to use.
+        azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS
+                                          enables at-scale enforcements and safeguards on your
+                                          clusters in a centralized, consistent manner.
                                           Learn more at aka.ms/aks/policy.
-        ingress-appgw                   - enable Application Gateway Ingress Controller addon (PREVIEW).
+        ingress-appgw                   - enable Application Gateway Ingress Controller addon
+                                          (PREVIEW).
         open-service-mesh               - enable Open Service Mesh addon (PREVIEW).
         gitops                          - enable GitOps (PREVIEW).
-        azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon (PREVIEW).
+        azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon
+                                          (PREVIEW).
 parameters:
   - name: --addon -a
     type: string
@@ -1375,16 +1411,27 @@ type: command
 short-summary: Enable Kubernetes addons.
 long-summary: |-
     These addons are available:
-        http_application_routing        - configure ingress with automatic public DNS name creation.
-        monitoring                      - turn on Log Analytics monitoring. Uses the Log Analytics Default Workspace if it exists, else creates one. Specify "--workspace-resource-id" to use an existing workspace.
-                                          If monitoring addon is enabled --no-wait argument will have no effect
-        virtual-node                    - enable AKS Virtual Node. Requires --subnet-name to provide the name of an existing subnet for the Virtual Node to use.
-        azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS enables at-scale enforcements and safeguards on your clusters in a centralized, consistent manner.
+        http_application_routing        - configure ingress with automatic public DNS name
+                                          creation.
+        monitoring                      - turn on Log Analytics monitoring. Uses the Log
+                                          Analytics Default Workspace if it exists, else creates
+                                          one. Specify "--workspace-resource-id" to use an
+                                          existing workspace.
+                                          If monitoring addon is enabled --no-wait argument will
+                                          have no effect.
+        virtual-node                    - enable AKS Virtual Node. Requires --subnet-name to
+                                          provide the name of an existing subnet for the Virtual
+                                          Node to use.
+        azure-policy                    - enable Azure policy. The Azure Policy add-on for AKS
+                                          enables at-scale enforcements and safeguards on your
+                                          clusters in a centralized, consistent manner.
                                           Learn more at aka.ms/aks/policy.
-        ingress-appgw                   - enable Application Gateway Ingress Controller addon (PREVIEW).
+        ingress-appgw                   - enable Application Gateway Ingress Controller addon
+                                          (PREVIEW).
         open-service-mesh               - enable Open Service Mesh addon (PREVIEW).
         gitops                          - enable GitOps (PREVIEW).
-        azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon (PREVIEW).
+        azure-keyvault-secrets-provider - enable Azure Keyvault Secrets Provider addon
+                                          (PREVIEW).
 parameters:
   - name: --addons -a
     type: string

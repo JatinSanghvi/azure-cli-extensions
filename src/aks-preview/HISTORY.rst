@@ -3,6 +3,10 @@
 Release History
 ===============
 
+0.5.59
+++++++
+* Add support for enabling KEDA with `--enable-keda` flag.
+
 0.5.58
 ++++++
 * Add support for enabling Azure KeyVault KMS with `--enable-azure-keyvault-kms` flag.

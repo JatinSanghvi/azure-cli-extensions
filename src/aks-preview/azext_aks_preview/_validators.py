@@ -522,3 +522,12 @@ def validate_azure_keyvault_kms_key_id(namespace):
         segments = key_id[len(https_prefix):].split("/")
         if len(segments) != 4 or segments[1] != "keys":
             raise InvalidArgumentValueError(err_msg)
+
+
+def validate_keda_log_level(namespace):
+    log_level = namespace.keda_log_level
+    if log_level:
+        allowed_log_levels = ["debug", "info", "error"]
+        if log_level not in allowed_log_levels:
+            raise InvalidArgumentValueError('--keda-log-level is not a valid KEDA logging level. ' \
+                  f'Possible options: {", ".join(allowed_log_levels)}.')

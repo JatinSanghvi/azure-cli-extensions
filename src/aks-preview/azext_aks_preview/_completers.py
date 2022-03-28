@@ -96,3 +96,9 @@ def _get_location_from_resource_group(cli_ctx, resource_group_name):
         # For example: "Warning: Resource group 'bogus' could not be found."
         from argcomplete import warn
         warn('Warning: {}'.format(err.message))
+
+@Completer
+def get_keda_log_levels_completion_list(cmd, prefix, namespace, **kwargs):  # pylint: disable=unused-argument
+    """Return allowed KEDA logging levels."""
+
+    return ["debug", "info", "error"]

@@ -83,7 +83,7 @@ ManagedClusterAddonProfile = TypeVar("ManagedClusterAddonProfile")
 ManagedClusterOIDCIssuerProfile = TypeVar('ManagedClusterOIDCIssuerProfile')
 Snapshot = TypeVar("Snapshot")
 AzureKeyVaultKms = TypeVar('AzureKeyVaultKms')
-
+ManagedClusterAutoScalerProfile = TypeVar('ManagedClusterAutoScalerProfile')
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 class AKSPreviewModels(AKSModels):
@@ -127,6 +127,11 @@ class AKSPreviewModels(AKSModels):
         )
         self.AzureKeyVaultKms = self.__cmd.get_models(
             "AzureKeyVaultKms",
+            resource_type=self.resource_type,
+            operation_group="managed_clusters",
+        )
+        self.ManagedClusterAutoScalerProfile = self.__cmd.get_models(
+            "ManagedClusterAutoScalerProfile",
             resource_type=self.resource_type,
             operation_group="managed_clusters",
         )
@@ -1671,6 +1676,51 @@ class AKSPreviewContext(AKSContext):
         """
         return self._get_azure_keyvault_kms_key_id(enable_validation=True)
 
+    def get_enable_keda(self) -> bool:
+        """Obtain the value of enable_keda.
+
+        :return: bool
+        """
+        # Read the original value passed by the command.
+        enable_keda = self.raw_param.get("enable_keda")
+
+        # In create mode, try to read the property value corresponding to the parameter from the `mc` object.
+        if self.decorator_mode == DecoratorMode.CREATE:
+            if (
+                self.mc and
+                self.mc.auto_scaler_profile and
+                self.mc.auto_scaler_profile.keda
+            ):
+                enable_keda = self.mc.auto_scaler_profile.keda.enabled
+
+        return enable_keda
+
+    def get_keda_log_level(self) -> Union[str, None]:
+        """Obtain the value of keda_log_level.
+
+        When being assigned, it will check if enable_keda is False and if so, raise a RequiredArgumentMissingError.
+
+        :return: string or None
+        """
+        # Read the original value passed by the command.
+        keda_log_level = self.raw_param.get("keda_log_level")
+
+        # In create mode, try to read the property value corresponding to the parameter from the `mc` object.
+        if self.decorator_mode == DecoratorMode.CREATE:
+            if (
+                self.mc and
+                self.mc.auto_scaler_profile and
+                self.mc.auto_scaler_profile.keda and
+                self.mc.auto_scaler_profile.keda.log_level is not None
+            ):
+                keda_log_level = self.mc.auto_scaler_profile.keda.log_level
+
+        enable_keda = self.get_enable_keda()
+        if keda_log_level and (enable_keda is None or enable_keda is False):
+            raise RequiredArgumentMissingError('"--keda-log-level" requires "--enable-keda".')
+
+        return keda_log_level
+
 
 class AKSPreviewCreateDecorator(AKSCreateDecorator):
     # pylint: disable=super-init-not-called
@@ -2009,6 +2059,26 @@ class AKSPreviewCreateDecorator(AKSCreateDecorator):
 
         return mc
 
+    def set_up_auto_scaler_profile(self, mc: ManagedCluster) -> ManagedCluster:
+        """Set up auto-scaler profile for the ManagedCluster object.
+
+        :return: the ManagedCluster object
+        """
+        if not isinstance(mc, self.models.ManagedCluster):
+            raise CLIInternalError(
+                "Unexpected mc object with type '{}'.".format(type(mc))
+            )
+
+        auto_scaler_profile = None
+        if self.context.get_enable_keda():
+            auto_scaler_profile = self.models.ManagedClusterAutoScalerProfile()
+            auto_scaler_profile.keda = self.models.Keda(
+                enabled=True,
+                log_level=self.context.get_keda_log_level())
+
+        mc.auto_scaler_profile = auto_scaler_profile
+        return mc
+
     def construct_mc_preview_profile(self) -> ManagedCluster:
         """The overall controller used to construct the preview ManagedCluster profile.
 
@@ -2029,6 +2099,8 @@ class AKSPreviewCreateDecorator(AKSCreateDecorator):
         mc = self.set_up_pod_identity_profile(mc)
         mc = self.set_up_oidc_issuer_profile(mc)
         mc = self.set_up_azure_keyvault_kms(mc)
+        # set up auto-scaler profile
+        mc = self.set_up_auto_scaler_profile(mc)
         return mc
 
     def create_mc_preview(self, mc: ManagedCluster) -> ManagedCluster:
@@ -2177,11 +2249,13 @@ class AKSPreviewUpdateDecorator(AKSUpdateDecorator):
                 '"--disable-local-accounts" or '
                 '"--enable-public-fqdn" or '
                 '"--disable-public-fqdn"'
-                '"--enble-windows-gmsa" or '
+                '"--enable-windows-gmsa" or '
                 '"--nodepool-labels" or '
                 '"--enable-oidc-issuer" or '
                 '"--http-proxy-config" or '
-                '"--enable-azure-keyvault-kms".'
+                '"--enable-azure-keyvault-kms" or '
+                '"--enable-keda" or '
+                '"--keda-log-level".'
             )
 
     def update_load_balancer_profile(self, mc: ManagedCluster) -> ManagedCluster:
@@ -2336,6 +2410,23 @@ class AKSPreviewUpdateDecorator(AKSUpdateDecorator):
 
         return mc
 
+    def update_auto_scaler_profile(self, mc: ManagedCluster) -> ManagedCluster:
+        """Update auto-scaler profile for the ManagedCluster object.
+
+        :return: the ManagedCluster object
+        """
+        self._ensure_mc(mc)
+
+        if self.context.get_enable_keda():
+            if mc.auto_scaler_profile is None:
+                mc.auto_scaler_profile = self.models.ManagedClusterAutoScalerProfile()
+
+            mc.auto_scaler_profile.keda = self.models.Keda(
+                enabled=True,
+                log_level=self.context.get_keda_log_level())
+
+        return mc
+
     def patch_mc(self, mc: ManagedCluster) -> ManagedCluster:
         """Helper function to patch the ManagedCluster object.
 
@@ -2370,6 +2461,8 @@ class AKSPreviewUpdateDecorator(AKSUpdateDecorator):
         mc = self.update_oidc_issuer_profile(mc)
         mc = self.update_http_proxy_config(mc)
         mc = self.update_azure_keyvault_kms(mc)
+        # update auto-scaler profile
+        mc = self.update_auto_scaler_profile(mc)
         return mc
 
     def update_mc_preview(self, mc: ManagedCluster) -> ManagedCluster:
